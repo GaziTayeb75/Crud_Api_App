@@ -1,6 +1,6 @@
 import 'dart:convert';
-
-import 'package:crud_api_app/models/product.dart';
+import 'package:crud_api_app/app_urls.dart';
+import 'package:crud_api_app/models/add_new_product.dart';
 import 'package:crud_api_app/ui/screens/add_new_product_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
@@ -15,7 +15,7 @@ class ProductListScreen extends StatefulWidget {
 }
 
 class _ProductListScreenState extends State<ProductListScreen> {
-  List<Product> productList = [];
+  List<ProductModel> productList = [];
 
   bool _getProductListInProgress = false;
 
@@ -31,25 +31,26 @@ class _ProductListScreenState extends State<ProductListScreen> {
       appBar: AppBar(
         title: const Text('Product list'),
         actions: [
-          IconButton(onPressed: (){
-            _getProductList();
-          }, icon:const Icon(Icons.refresh))
+          IconButton(
+              onPressed: () {
+                _getProductList();
+              },
+              icon: const Icon(Icons.refresh))
         ],
       ),
-      
       body: RefreshIndicator(
-        onRefresh: () async{
-          _getProductList();
+        onRefresh: () async {
+         await _getProductList();
         },
         child: Visibility(
           visible: _getProductListInProgress == false,
-          replacement: Center(
+          replacement: const Center(
             child: CircularProgressIndicator(),
           ),
           child: ListView.builder(
             itemCount: productList.length,
             itemBuilder: (context, index) {
-              return  ProductItem(
+              return ProductItem(
                 product: productList[index],
               );
             },
@@ -57,8 +58,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.pushNamed(context, AddNewProductScreen.name);
+        onPressed: () async {
+        await  Navigator.pushNamed(context, AddNewProductScreen.name);
         },
         child: const Icon(Icons.add),
       ),
@@ -69,28 +70,27 @@ class _ProductListScreenState extends State<ProductListScreen> {
     productList.clear();
     _getProductListInProgress = true;
     setState(() {});
-    Uri uri = Uri.parse('https://crud.teamrabbil.com/api/v1/ReadProduct');
+
+
+    Uri uri = Uri.parse(AppUrls.readProduct);
+
     Response response = await get(uri);
-    print(response.statusCode);
-    print(response.body);
+    print('Status Code: ${response.statusCode}');
+    print('Response Body: ${response.body}');
+
     if (response.statusCode == 200) {
       final decodedData = jsonDecode(response.body);
       print(decodedData['status']);
+
+
       for (Map<String, dynamic> p in decodedData['data']) {
-        Product product = Product(
-          id: p['_id'],
-          ProductName: p['ProductName'],
-          ProductCode: p['ProductCode'],
-          quantity: p['quantity'],
-          UnitPrice: p['UnitPrice'],
-          image: p['Img'],
-          TotalPrice: p['TotalPrice'],
-          CreatedData: p['CreatedDate'],
-        );
+        ProductModel product = ProductModel.fromJson(p);
         productList.add(product);
       }
+
       setState(() {});
     }
+
     _getProductListInProgress = false;
     setState(() {});
   }

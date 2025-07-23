@@ -1,5 +1,6 @@
 import 'dart:convert';
-
+import 'package:crud_api_app/app_urls.dart' show AppUrls;
+import 'package:crud_api_app/models/add_new_product.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 
@@ -46,7 +47,7 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
             controller: _nameTEControllar,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration:
-                InputDecoration(hintText: 'Name', labelText: 'Product Name'),
+                const InputDecoration(hintText: 'Name', labelText: 'Product Name'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
                 return 'Enter product name';
@@ -59,7 +60,7 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
             autovalidateMode: AutovalidateMode.onUserInteraction,
             keyboardType: TextInputType.number,
             decoration:
-                InputDecoration(hintText: 'Price', labelText: 'Product Price'),
+                const InputDecoration(hintText: 'Price', labelText: 'Product Price'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
                 return 'Enter product price';
@@ -71,7 +72,7 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
             controller: _totalPriceTEControllar,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             keyboardType: TextInputType.number,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'Total Price', labelText: 'Product total price'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
@@ -83,7 +84,7 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
           TextFormField(
             controller: _quantityTEControllar,
             autovalidateMode: AutovalidateMode.onUserInteraction,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'Quantity', labelText: 'Product quantity'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
@@ -96,7 +97,7 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
             controller: _codeTEControllar,
             autovalidateMode: AutovalidateMode.onUserInteraction,
             decoration:
-                InputDecoration(hintText: 'Code', labelText: 'Product code'),
+                const InputDecoration(hintText: 'Code', labelText: 'Product code'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
                 return 'Enter product code';
@@ -107,7 +108,7 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
           TextFormField(
             controller: _imageTEControllar,
             autovalidateMode: AutovalidateMode.onUserInteraction,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'Image url', labelText: 'Product Image'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
@@ -121,7 +122,7 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
           ),
           Visibility(
             visible:_addNewProductInProgress == false,
-            replacement:Center(
+            replacement:const Center(
               child: CircularProgressIndicator(),
             ) ,
             child: ElevatedButton(
@@ -141,38 +142,46 @@ class _AddNewProductScreenState extends State<AddNewProductScreen> {
   Future<void> _addNewProduct() async {
     _addNewProductInProgress = true;
     setState(() {});
-    Uri uri = Uri.parse('https://crud.teamrabbil.com/api/v1/CreateProduct');
-    Map<String, dynamic> requestBody = {
-      "Img": _imageTEControllar.text.trim(),
-      "ProductCode": _codeTEControllar.text.trim(),
-      "ProductName": _nameTEControllar.text.trim(),
-      "Qty": _quantityTEControllar.text.trim(),
-      "TotalPrice": _totalPriceTEControllar.text.trim(),
-      "UnitPrice": _priceTEControllar.text.trim(),
-    };
-    Response response = await post(
-      uri,
-      headers: {'Content-type': 'application/json'},
-      body: jsonEncode(requestBody),
+
+    // 1. TextField থেকে ডেটা নিয়ে Model বানাই
+    ProductModel newProduct = ProductModel(
+      ProductName: _nameTEControllar.text.trim(),
+      ProductCode: _codeTEControllar.text.trim(),
+      image: _imageTEControllar.text.trim(),
+      UnitPrice: _priceTEControllar.text.trim(),
+      Qty: _quantityTEControllar.text.trim(),
+      TotalPrice: _totalPriceTEControllar.text.trim(),
     );
-    print(response.statusCode);
-    print(response.body);
-    _addNewProductInProgress = false;
-    setState(() {});
-    if (response.statusCode == 200) {
-      _clearTextFields();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('New product added!'),
-        ),
+
+    try {
+      final response = await post(
+        Uri.parse(AppUrls.addNewProduct), // 2. URL নিয়ে গেলাম AppUrls থেকে
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(newProduct.toJson()), // 3. Model কে JSON বানায় পাঠাই
       );
-    }else{ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('New product add failed! Try Again.'),
-        ),
-    );
+
+      _addNewProductInProgress = false;
+      setState(() {});
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _clearTextFields();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('New product added successfully!')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed! (${response.statusCode})')),
+        );
+      }
+    } catch (e) {
+      _addNewProductInProgress = false;
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
+
 
   void _clearTextFields() {
     _nameTEControllar.clear();

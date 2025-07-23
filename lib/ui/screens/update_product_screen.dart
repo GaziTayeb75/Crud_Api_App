@@ -1,20 +1,21 @@
-import 'dart:convert';
-
-import 'package:crud_api_app/models/product.dart';
+import 'package:crud_api_app/controllers/update_product_controller.dart';
+import 'package:crud_api_app/models/add_new_product.dart' show ProductModel;
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
+
 
 class UpdateProductScreen extends StatefulWidget {
   const UpdateProductScreen({super.key, required this.product});
 
   static const String name = '/update_product';
-  final Product product;
+  final ProductModel product;
 
   @override
   State<UpdateProductScreen> createState() => _UpdateProductScreenState();
 }
 
 class _UpdateProductScreenState extends State<UpdateProductScreen> {
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController _nameTEControllar = TextEditingController();
   final TextEditingController _priceTEControllar = TextEditingController();
   final TextEditingController _totalPriceTEControllar = TextEditingController();
@@ -29,7 +30,7 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
     _nameTEControllar.text = widget.product.ProductName ?? '';
     _priceTEControllar.text = widget.product.UnitPrice ?? '';
     _totalPriceTEControllar.text = widget.product.TotalPrice ?? '';
-    _quantityTEControllar.text = widget.product.quantity ?? '';
+    _quantityTEControllar.text = widget.product.Qty ?? '';
     _imageTEControllar.text = widget.product.image ?? '';
     _codeTEControllar.text = widget.product.ProductCode ?? '';
   }
@@ -43,7 +44,10 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: _buildProductForm(),
+          child: Form(
+            key: _formKey,
+            child: _buildProductForm(),
+          ),
         ),
       ),
     );
@@ -51,13 +55,13 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
 
   Widget _buildProductForm() {
     return Form(
-      //TODO: Complete form validation
+
       child: Column(
         children: [
           TextFormField(
             controller: _nameTEControllar,
             decoration:
-                InputDecoration(hintText: 'Name', labelText: 'Product Name'),
+                const InputDecoration(hintText: 'Name', labelText: 'Product Name'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
                 return 'Enter product name';
@@ -68,7 +72,7 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
           TextFormField(
             controller: _priceTEControllar,
             decoration:
-                InputDecoration(hintText: 'Price', labelText: 'Product Price'),
+                const InputDecoration(hintText: 'Price', labelText: 'Product Price'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
                 return 'Enter product price';
@@ -78,7 +82,7 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
           ),
           TextFormField(
             controller: _totalPriceTEControllar,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'Total Price', labelText: 'Product total price'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
@@ -89,7 +93,7 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
           ),
           TextFormField(
             controller: _quantityTEControllar,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'Quantity', labelText: 'Product quantity'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
@@ -101,7 +105,7 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
           TextFormField(
             controller: _codeTEControllar,
             decoration:
-                InputDecoration(hintText: 'Code', labelText: 'Product code'),
+                const InputDecoration(hintText: 'Code', labelText: 'Product code'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
                 return 'Enter product code';
@@ -111,7 +115,7 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
           ),
           TextFormField(
             controller: _imageTEControllar,
-            decoration: InputDecoration(
+            decoration: const InputDecoration(
                 hintText: 'Image url', labelText: 'Product Image'),
             validator: (String? value) {
               if (value?.trim().isEmpty ?? true) {
@@ -125,12 +129,12 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
           ),
           Visibility(
             visible: _updateProductInProgress == false,
-            replacement: Center(
+            replacement: const Center(
               child: CircularProgressIndicator(),
             ),
             child: ElevatedButton(
               onPressed: () {
-                //TODO: check form validation
+                if (_formKey.currentState!.validate())
                 _updateProduct();
               },
               child: const Text('Update Product'),
@@ -141,46 +145,41 @@ class _UpdateProductScreenState extends State<UpdateProductScreen> {
     );
   }
 
+
+
   Future<void> _updateProduct() async {
-    _updateProductInProgress = true;
-    setState(() {});
-    Uri uri = Uri.parse(
-        'https://crud.teamrabbil.com/api/v1/UpdateProduct/${widget.product.id}');
+    setState(() {
+      _updateProductInProgress = true;
+    });
 
-    Map<String, dynamic> requestBody = {
-      "Img": _imageTEControllar.text.trim(),
-      "ProductCode": _codeTEControllar.text.trim(),
-      "ProductName": _nameTEControllar.text.trim(),
-      "Qty": _quantityTEControllar.text.trim(),
-      "TotalPrice": _totalPriceTEControllar.text.trim(),
-      "UnitPrice": _priceTEControllar.text.trim(),
-    };
-
-    Response response = await post(
-        uri,
-      headers: {
-          'Content-type': 'application/json'
-      },
-        body: jsonEncode(requestBody),
+    ProductModel updatedProduct = ProductModel(
+      id: widget.product.id,
+      ProductName: _nameTEControllar.text.trim(),
+      ProductCode: _codeTEControllar.text.trim(),
+      image: _imageTEControllar.text.trim(),
+      UnitPrice: _priceTEControllar.text.trim(),
+      Qty: _quantityTEControllar.text.trim(),
+      TotalPrice: _totalPriceTEControllar.text.trim(),
     );
-    print(response.statusCode);
-    print(response.body);
-    _updateProductInProgress = false;
-    setState(() {});
-    if (response.statusCode == 200) {
+
+    bool success = await UpdateProductController().updateProduct(updatedProduct);
+
+    setState(() {
+      _updateProductInProgress = false;
+    });
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Product has been updated!'),
-        ),
+        const SnackBar(content: Text('Product has been updated!')),
       );
+      Navigator.pop(context, true);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Product has been failed! Try again.'),
-        ),
+        const SnackBar(content: Text('Product update failed! Try again.')),
       );
     }
   }
+
 
   @override
   void dispose() {
